@@ -1,0 +1,123 @@
+import re
+import requests
+from lxml import html
+from bs4 import BeautifulSoup
+import urllib
+import csv
+import os
+import codecs
+import random
+####创建网页######
+bank_lis=[]
+fund_lis=[]
+stock_lis = []
+web_lis = []
+title_lis =[]
+insur_lis = []
+time_lis = []
+hlwjr_lis =[]
+xsb_lis=[]
+zq_lis = []
+for a in range(1,5):
+    bank_lis.append(r'http://money.people.com.cn/bank/index'+str(a)+r'.html')
+    fund_lis.append(r'http://money.people.com.cn/fund/GB/index'+str(a)+r'.html')
+    stock_lis.append(r'http://money.people.com.cn/stock/GB/222942/index'+str(a)+r'.html')
+    insur_lis.append(r'http://money.people.com.cn/insurance/GB/index'+str(a)+r'.html')
+    hlwjr_lis.append('http://money.people.com.cn/GB/392426/index'+str(a)+r'.html')
+    xsb_lis.append('http://money.people.com.cn/GB/397730/index'+str(a)+r'.html')
+    zq_lis.append('http://money.people.com.cn/GB/67605/index'+str(a)+r'.html')
+###创建文件名######
+def get_name (urllis):
+    raw = str(urllis[0])
+    ingre = raw.split('/')
+    return ingre[3]
+def filename(name):
+    filename = r'renminwang'+str(get_name(name))+r'.csv'
+    return filename
+def get_csv(lis):
+    file_name = filename(lis)#括号里选择bank_lis, fund_lis,stock_lis,insur_lis”
+    file_obj = codecs.open(str(file_name),'a+', 'utf-8') # 防止乱码
+    writer = csv.writer(file_obj)
+    writer.writerow(["标题","网址","时间","内容"])
+######人民网_保险_基金_互联网金融_新三板#########
+def  rmw(url_list):
+        headers = { "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.37"}
+        for url in url_list:
+            response = requests.post(url, headers=headers)
+            head = response.headers
+            response.encoding='gbk'
+            c = response.text
+            pro_c = re.findall('<!--p2-->(.*)',c,re.S)
+            for real_c in pro_c:
+                webs = re.findall('''<a href='(.*[0-9]+.*[0-9]+.*)' target="_blank">''',real_c)
+                for web in webs :
+                    if len(web)<30:continue
+                    pro_web = 'http://money.people.com.cn'+web
+                    title_lis.append(pro_web)
+                    #print(pro_web)
+                titles = re.findall('''<a href='.+' target="_blank">(.*)</a>''',real_c)
+                for title in titles:
+                    if len(title)<6:continue
+                    web_lis.append(title)
+                    #print(title)
+                times = re.findall('''\[(.*月.*日 .*\:.*)\]''',real_c)
+                for time in times:
+                    time_lis.append(time)
+                for u in range(0,min(len(time_lis),len(title_lis),len(web_lis))):
+                    print(u,title_lis[u],web_lis[u],time_lis[u])
+                for i in range(0,min(len(time_lis),len(title_lis),len(web_lis))):
+                    print(title_lis[i],web_lis[i],time_lis[i])
+                    handle_con = requests.get(title_lis[i])
+                    con_soup = BeautifulSoup(handle_con.content,'lxml')
+                    a = ''
+                    for raw_con in con_soup.find_all('div',class_="box_con"):
+                        cons = raw_con.find_all('p')
+                        for con in cons:
+                            a =a+ con.text
+                        print(a)
+                    writer.writerow([title_lis[i],web_lis[i],time_lis[i],a])
+                    i= i+1
+######人民网_股票#########
+def  rmw_stock(url_list):
+        file_obj = codecs.open('remenwang_stock','a+', 'utf-8') # 防止乱码
+        writer = csv.writer(file_obj)
+        writer.writerow(["标题","网址","时间","内容"])
+        headers = { "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.37"}
+        for url in url_list:
+            response = requests.post(url, headers=random.choice(headers))
+            head = response.headers
+            response.encoding='gbk'
+            c = response.text
+            pro_c = re.findall('下一页(.*)',c,re.S)
+            for real_c in pro_c:
+                webs = re.findall('''<a href='(.*[0-9]+.*[0-9]+.*)' target="_blank">''',real_c)
+                for web in webs :
+                    if len(web)<30:continue
+                    pro_web = 'http://money.people.com.cn'+web
+                    title_lis.append(pro_web)
+                    #print(pro_web)
+                titles = re.findall('''<a href='.+' target="_blank">(.*)</a>''',real_c)
+                for title in titles:
+                    if len(title)<6:continue
+                    web_lis.append(title)
+                    #print(title)
+                times = re.findall('''\[( [0-9]+年[0-9]+月[0-9]+日 )\]''',real_c)
+                for time in times:
+                    time_lis.append(time)
+                for u in range(0,min(len(time_lis),len(title_lis),len(web_lis))):
+                    print(u,title_lis[u],web_lis[u],time_lis[u])
+                for i in range(0,min(len(time_lis),len(title_lis),len(web_lis))):
+                    print(title_lis[i],web_lis[i],time_lis[i])
+                    handle_con = requests.get(title_lis[i])
+                    con_soup = BeautifulSoup(handle_con.content,'lxml')
+                    a = ''
+                    for raw_con in con_soup.find_all('div',class_="box_con"):
+                        cons = raw_con.find_all('p')
+                        for con in cons:
+                            a =a+ con.text
+                        print(a)
+                    writer.writerow([title_lis[i],web_lis[i],time_lis[i],a])
+                    i= i+1
+                    
+get_csv(zq_lis)#括号里选择bank_lis, fund_lis,stock_lis，insur_lis上下一致”
+rmw(zq_lis)#括号里选择bank_lis, fund_lis,stock_lis，insur_lis上下一致”
